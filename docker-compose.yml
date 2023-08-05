@@ -1,0 +1,41 @@
+version: '3.1'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    restart: always
+    container_name: some-rabbit
+    ports:
+      - "15672:15672" # порт для веб-интерфейса RabbitMQ
+      - "5672:5672"  # порт для AMQP протокола
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  m1:
+    build: ./M1 # путь к Dockerfile для M1 сервиса
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      PORT: 4000
+      QUEUE_NAME: tasks
+      QUEUE_RESULT_NAME: tasksResult
+    ports:
+      - "4040:4000"
+
+  m2:
+    build: ./M2 # путь к Dockerfile для M2 сервиса
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+      QUEUE_NAME: tasks
+      QUEUE_RESULT_NAME: tasksResult
